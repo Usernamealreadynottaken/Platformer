@@ -6,13 +6,18 @@
 #include "types.h"
 
 // For debugging purpose
-#include <windows.h>
 #include "assert.h"
 
 // Title, displayed only in windowed mode
 static const char * window_title = "Platformer";
 // Desired fps
 static const uint32 fps = 60;
+// Base screen resolution
+static const int horizontal_resolution = 1920;
+static const int vertical_resolution = 1080;
+
+// TODO implement custom cursor
+void confineCursor(sf::RenderWindow & window);
 
 int main()
 {
@@ -22,26 +27,33 @@ int main()
 	GetWindowRect(hDesktop, &desktop);
 	int horizontal = desktop.right;
 	int vertical = desktop.bottom;
+	// Window scale
+	float scalex = static_cast<float>(horizontal_resolution) / static_cast<float>(horizontal);
+	float scaley = static_cast<float>(vertical_resolution) / static_cast<float>(vertical);
+
 	// Video modes retrieved are always valid
 	// Reading them from a file, might require validation
 	// Third, optional argument is a bit mask containing window style
 	// Full screen
 	//sf::RenderWindow window(sf::VideoMode(horizontal, vertical), window_title, sf::Style::Fullscreen);
+
 	// Nice, clean window for debugging
 	horizontal = 640;
 	vertical = 480;
-	sf::RenderWindow window(sf::VideoMode(640, 480), window_title);
+	scalex = static_cast<float>(horizontal_resolution) / static_cast<float>(horizontal);
+	scaley = static_cast<float>(vertical_resolution) / static_cast<float>(vertical);
+	sf::RenderWindow window(sf::VideoMode(horizontal, vertical), window_title);
 
 	window.setFramerateLimit(fps);
 
 	// Random irrelevant stuff, just for lulz
-	float radius = 50.0f;
+	float radius = 50.0f / scalex;
 	sf::CircleShape circle(radius);
 	sf::Vector2f position, velocity;
 	position.x = 270.0f;
 	position.y = 190.0f;
-	velocity.x = 13.0f;
-	velocity.y = 7.0f;
+	velocity.x = 1.3f;
+	velocity.y = 0.7f;
 	circle.move(position);
 	circle.setFillColor(sf::Color::Red);
 	bool drag = false;
@@ -53,8 +65,8 @@ int main()
 	}
 	sf::Sound sound;
 	sound.setBuffer(sound_buffer);
-	float scalex = 1.0f;
-	float scaley = 1.0f;
+
+	confineCursor(window);
 
 	// Event handle
 	sf::Event event;
@@ -80,11 +92,11 @@ int main()
 			// remove
 			if (event.type == sf::Event::MouseButtonPressed) {
 				if (event.mouseButton.button == sf::Mouse::Left) {
-					float x = static_cast<float>(event.mouseButton.x) * scalex;
-					float y = static_cast<float>(event.mouseButton.y) * scaley;
-					float clickx = x - position.x;
-					float clicky = y - position.y;
-					if (clickx > 0.0f && clickx < radius * 2.0f && clicky > 0.0f && clicky < radius * 2.0f) {
+					float x = static_cast<float>(event.mouseButton.x);
+					float y = static_cast<float>(event.mouseButton.y);
+					float clickx = (x - position.x) * scalex;
+					float clicky = (y - position.y) * scaley;
+					if (clickx > 0.0f && clickx < radius * scalex * 2.0f && clicky > 0.0f && clicky < radius * scaley * 2.0f) {
 						position.x = x - radius;
 						position.y = y - radius;
 						velocity.x = 0.0f;
@@ -96,8 +108,8 @@ int main()
 			if (event.type == sf::Event::MouseMoved && drag) {
 				prevx = position.x;
 				prevy = position.y;
-				position.x = event.mouseMove.x * scalex - radius;
-				position.y = event.mouseMove.y * scaley - radius;
+				position.x = event.mouseMove.x - radius;
+				position.y = event.mouseMove.y - radius;
 			}
 			if (event.type == sf::Event::MouseButtonReleased) {
 				if (event.mouseButton.button == sf::Mouse::Left && drag) {
@@ -148,4 +160,24 @@ int main()
 	}
 	
 	return 0;
+}
+
+void confineCursor(sf::RenderWindow & window)
+{
+	HWND handle = window.getSystemHandle();
+	RECT window_rectangle;
+	RECT client_rectangle;
+	GetWindowRect(handle, &window_rectangle);
+	GetClientRect(handle, &client_rectangle);
+
+	long thin_edge = (window_rectangle.right - window_rectangle.left) - client_rectangle.right;
+	long fat_edge = (window_rectangle.bottom - window_rectangle.top) - client_rectangle.bottom;
+	thin_edge >>= 1;
+	fat_edge -= thin_edge;
+	window_rectangle.top += fat_edge;
+	window_rectangle.left += thin_edge;
+	window_rectangle.right -= thin_edge;
+	window_rectangle.bottom -= thin_edge;
+
+	ClipCursor(&window_rectangle);
 }
