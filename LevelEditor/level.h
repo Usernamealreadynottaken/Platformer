@@ -6,6 +6,7 @@ class Level
 {
 public:
 	Level();
+	~Level();
 	void drawCameraOffsets(sf::RenderTarget & target);
 protected:
 private:

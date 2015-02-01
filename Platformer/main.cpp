@@ -1,9 +1,12 @@
 // SFML libs
 #include <SFML\Graphics.hpp>
 #include <SFML\Audio.hpp>
+#include <Windows.h>
 
 // Custom types
 #include "types.h"
+
+#include "cursor.h"
 
 // For debugging purpose
 #include "assert.h"
@@ -15,9 +18,8 @@ static const uint32 fps = 60;
 // Base screen resolution
 static const int horizontal_resolution = 1920;
 static const int vertical_resolution = 1080;
-
-// TODO implement custom cursor
-void confineCursor(sf::RenderWindow & window);
+// System mouse position
+static const sf::Vector2i system_mouse_position(10, 10);
 
 int main()
 {
@@ -45,6 +47,11 @@ int main()
 	sf::RenderWindow window(sf::VideoMode(horizontal, vertical), window_title);
 
 	window.setFramerateLimit(fps);
+	window.setMouseCursorVisible(false);
+	sf::Mouse::setPosition(system_mouse_position, window);
+
+	// Cursor
+	Cursor cursor;
 
 	// Random irrelevant stuff, just for lulz
 	float radius = 50.0f / scalex;
@@ -66,8 +73,6 @@ int main()
 	sf::Sound sound;
 	sound.setBuffer(sound_buffer);
 
-	confineCursor(window);
-
 	// Event handle
 	sf::Event event;
 	// Game loop
@@ -86,6 +91,9 @@ int main()
 				if (event.key.code == sf::Keyboard::Escape) {
 					window.close();
 				}
+			}
+			if (event.type == sf::Event::MouseMoved) {
+				cursor.updatePosition(event.mouseMove.x, event.mouseMove.y);
 			}
 
 
@@ -128,7 +136,7 @@ int main()
 		
 		window.clear(sf::Color::Black);
 		window.draw(circle);
-
+		window.draw(cursor.sprite);
 
 		// bouncy
 		circle.setPosition(position);
@@ -160,24 +168,4 @@ int main()
 	}
 	
 	return 0;
-}
-
-void confineCursor(sf::RenderWindow & window)
-{
-	HWND handle = window.getSystemHandle();
-	RECT window_rectangle;
-	RECT client_rectangle;
-	GetWindowRect(handle, &window_rectangle);
-	GetClientRect(handle, &client_rectangle);
-
-	long thin_edge = (window_rectangle.right - window_rectangle.left) - client_rectangle.right;
-	long fat_edge = (window_rectangle.bottom - window_rectangle.top) - client_rectangle.bottom;
-	thin_edge >>= 1;
-	fat_edge -= thin_edge;
-	window_rectangle.top += fat_edge;
-	window_rectangle.left += thin_edge;
-	window_rectangle.right -= thin_edge;
-	window_rectangle.bottom -= thin_edge;
-
-	ClipCursor(&window_rectangle);
 }
